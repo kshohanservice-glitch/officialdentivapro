@@ -36,11 +36,16 @@ def _ensure_assets() -> None:
     never crashes due to a missing theme/images folder.
     """
     paths.ensure()
-    # Ensure theme folder exists
-    paths.themes_dir.mkdir(parents=True, exist_ok=True)
-    paths.fonts_dir.mkdir(parents=True, exist_ok=True)
-    paths.images_dir.mkdir(parents=True, exist_ok=True)
-    paths.icon_dir.mkdir(parents=True, exist_ok=True)
+    # Bundled assets are read-only when running from the installed
+    # PyInstaller application under Program Files. Runtime/user data must
+    # stay under paths.data_root, which is writable by the current user.
+    # In a source checkout, create the asset directories so a fresh checkout
+    # can still start without pre-created folders.
+    if not getattr(__import__("sys"), "frozen", False):
+        paths.themes_dir.mkdir(parents=True, exist_ok=True)
+        paths.fonts_dir.mkdir(parents=True, exist_ok=True)
+        paths.images_dir.mkdir(parents=True, exist_ok=True)
+        paths.icon_dir.mkdir(parents=True, exist_ok=True)
 
 
 def _apply_migrations(engine: Engine) -> None:
