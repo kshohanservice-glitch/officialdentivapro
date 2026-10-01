@@ -13,8 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
-
+from PIL import Image, ImageDraw
 
 ASSETS_ICON_DIR = Path(__file__).resolve().parents[1] / "assets" / "icon"
 SOURCE_SVG = ASSETS_ICON_DIR / "dentiva-pro.svg"
@@ -42,7 +41,7 @@ def _render_tooth_png(size: int) -> Image.Image:
     )
 
     # Tooth silhouette — simple shape for placeholder branding.
-    # Coordinates are in a 100×100 box; we scale.
+    # Coordinates are in a 100x100 box; we scale.
     s = (size - pad * 2) / 100
     ox, oy = pad, pad
 
