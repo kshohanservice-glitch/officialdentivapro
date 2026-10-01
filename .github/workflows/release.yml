@@ -79,6 +79,32 @@ jobs:
             Get-ChildItem dist -ErrorAction SilentlyContinue
           }
 
+      - name: Smoke-test frozen app startup
+        shell: pwsh
+        run: |
+          $env:DENTIVA_DATA_DIR = "$env:GITHUB_WORKSPACE\build-smoke-data"
+          Remove-Item -Recurse -Force $env:DENTIVA_DATA_DIR -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $env:DENTIVA_DATA_DIR | Out-Null
+
+          $exe = "$env:GITHUB_WORKSPACE\dist\DentivaPro\DentivaPro.exe"
+          if (!(Test-Path $exe)) {
+            Write-Error "Frozen executable not found: $exe"
+            exit 1
+          }
+
+          Write-Host "Starting frozen app smoke test..."
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 12
+          $process.Refresh()
+
+          if ($process.HasExited) {
+            Write-Error "Frozen app exited during startup with code $($process.ExitCode)."
+            exit 1
+          }
+
+          Write-Host "Frozen app remained running after startup; terminating smoke-test process."
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+
       - name: Install NSIS
         uses: negrutiu/nsis-install@v3
         with:
