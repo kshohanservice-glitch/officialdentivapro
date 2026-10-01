@@ -11,7 +11,7 @@
 !include "MUI2.nsh"
 
 Name "Dentiva Pro"
-OutFile "DentivaPro-Setup.exe"
+OutFile "${__FILEDIR__}\DentivaPro-Setup.exe"
 InstallDir "$PROGRAMFILES64\DentivaPro"
 InstallDirRegKey HKLM "Software\DentivaPro" ""
 RequestExecutionLevel admin
@@ -33,7 +33,7 @@ SetCompressor /SOLID lzma
 
 Section "Install"
     SetOutPath "$INSTDIR"
-    File /r "..\dist\DentivaPro\*.*"
+    File /r "${__FILEDIR__}\..\dist\DentivaPro\*.*"
 
     WriteUninstaller "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "Software\DentivaPro" "" "$INSTDIR"
