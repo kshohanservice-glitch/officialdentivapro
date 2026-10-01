@@ -189,6 +189,9 @@ class MainWindow(QMainWindow):
         from dentiva.ui.views.settings.settings_view import SettingsView
         self.replace_view("settings", SettingsView(self._session_factory, self._principal, parent=self._stack))
 
+        from dentiva.ui.views.backup.backup_view import BackupView
+        self.replace_view("backup", BackupView(self._session_factory, self._principal, parent=self._stack))
+
         # Notification badge refresh and generator timer (every 60 seconds).
         self._notif_timer = QTimer(self)
         self._notif_timer.timeout.connect(self._on_notif_tick)
