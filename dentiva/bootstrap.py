@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import sys
 from pathlib import Path
 
 from sqlalchemy.engine import Engine
@@ -41,7 +42,7 @@ def _ensure_assets() -> None:
     # stay under paths.data_root, which is writable by the current user.
     # In a source checkout, create the asset directories so a fresh checkout
     # can still start without pre-created folders.
-    if not getattr(__import__("sys"), "frozen", False):
+    if not getattr(sys, "frozen", False):
         paths.themes_dir.mkdir(parents=True, exist_ok=True)
         paths.fonts_dir.mkdir(parents=True, exist_ok=True)
         paths.images_dir.mkdir(parents=True, exist_ok=True)
