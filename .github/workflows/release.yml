@@ -31,14 +31,17 @@ jobs:
           cache: pip
 
       - name: Install package (build + dev extras)
+        shell: bash
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[build,dev]"
 
       - name: Ruff
+        shell: bash
         run: ruff check dentiva tests scripts
 
       - name: Mypy
+        shell: bash
         run: mypy dentiva
 
       - name: Pytest
@@ -46,25 +49,24 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          set -o pipefail
+          set -e
           python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
-          pytest -v --cov=dentiva --cov-report=term-missing 2>&1 | tee pytest.log
-
-      - name: Show pytest tail
-        if: ${{ always() }}
-        shell: pwsh
-        run: |
-          Write-Host "=== pytest.log tail ==="
-          if (Test-Path pytest.log) {
-            Get-Content pytest.log -Tail 200
-          } else {
-            Write-Host "pytest.log missing"
-          }
+          set +e
+          pytest -v --cov=dentiva --cov-report=term-missing > pytest.log 2>&1
+          rc=$?
+          set -e
+          echo "PYTEST_EXIT_CODE=$rc"
+          echo "--- pytest.log tail (250 lines) ---"
+          tail -n 250 pytest.log
+          echo "--- end of pytest.log tail ---"
+          exit $rc
 
       - name: Build icon
+        shell: bash
         run: python scripts/build_icon.py
 
       - name: Build PyInstaller onedir
+        shell: bash
         run: pyinstaller scripts/dist_pyinstaller.spec --noconfirm
 
       - name: Compile NSIS installer
@@ -84,7 +86,6 @@ jobs:
           } else {
             $label = "dev"
           }
-          # Sanitize slashes for filename safety
           $safe = $label -replace "/", "-"
           echo "label=$safe" >> $env:GITHUB_OUTPUT
           echo "Resolved installer label: $safe"
@@ -112,11 +113,8 @@ jobs:
       - name: Sanity-check the built onedir bundle
         shell: pwsh
         run: |
-          # Verify the PyInstaller onedir produced a real DentivaPro.exe and
-          # that key Qt/runtime DLLs are present (guards against missing
-          # hidden-imports / partial bundles before NSIS even runs).
           if (!(Test-Path "dist/DentivaPro/DentivaPro.exe")) {
-            Write-Error "dist/DentivaPro/DentivaPro.exe not found — PyInstaller did not produce a GUI binary."
+            Write-Error "dist/DentivaPro/DentivaPro.exe not found - PyInstaller did not produce a GUI binary."
             exit 1
           }
           Get-Item "dist/DentivaPro/DentivaPro.exe" | Format-List Name, Length
@@ -128,8 +126,6 @@ jobs:
           )
           foreach ($p in $required) {
             if (!(Test-Path $p)) {
-              # Paths shifted between PyInstaller 6.x minor versions; do a
-              # recursive search so we don't fail on a path layout change.
               $leaf = Split-Path $p -Leaf
               $found = Get-ChildItem -Recurse -Path dist/DentivaPro -Filter $leaf -ErrorAction SilentlyContinue | Select-Object -First 1
               if (-not $found) {

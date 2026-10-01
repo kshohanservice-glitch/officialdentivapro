@@ -27,38 +27,36 @@ jobs:
           cache: pip
 
       - name: Install dependencies
+        shell: bash
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
       - name: Ruff
-        run: |
-          ruff check dentiva tests
+        shell: bash
+        run: ruff check dentiva tests
 
       - name: Mypy (Linux)
         if: runner.os == 'Linux'
-        run: |
-          mypy dentiva
+        shell: bash
+        run: mypy dentiva
 
       - name: Pytest
         shell: bash
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          set -o pipefail
+          set -e
           python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
-          pytest -v --cov=dentiva --cov-report=term-missing 2>&1 | tee pytest.log
-
-      - name: Show pytest tail
-        if: ${{ always() }}
-        shell: pwsh
-        run: |
-          Write-Host "=== pytest.log tail ==="
-          if (Test-Path pytest.log) {
-            Get-Content pytest.log -Tail 200
-          } else {
-            Write-Host "pytest.log missing"
-          }
+          set +e
+          pytest -v --cov=dentiva --cov-report=term-missing > pytest.log 2>&1
+          rc=$?
+          set -e
+          echo "PYTEST_EXIT_CODE=$rc"
+          echo "--- pytest.log tail (250 lines) ---"
+          tail -n 250 pytest.log
+          echo "--- end of pytest.log tail ---"
+          exit $rc
 
       - name: Verify DB init
         shell: bash
@@ -67,5 +65,5 @@ jobs:
 
       - name: Verify icon build
         if: runner.os == 'Windows'
-        run: |
-          python scripts/build_icon.py
+        shell: bash
+        run: python scripts/build_icon.py
