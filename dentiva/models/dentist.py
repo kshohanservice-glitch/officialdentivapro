@@ -39,5 +39,5 @@ class Dentist(Base, TimestampMixin, SoftDeleteMixin):
     notes: Mapped[str] = mapped_column(Text, default="", server_default="")
 
     designations: Mapped[list[Designation]] = relationship(
-        secondary=dentist_designations, lazy="joined"
+        secondary=dentist_designations, lazy="selectin"
     )
