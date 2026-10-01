@@ -335,12 +335,22 @@ def _sha256_file(path: Path, chunk: int = 1024 * 1024) -> str:
 def _hot_copy_sqlite(src: Path, dst: Path) -> None:
     """Create a consistent snapshot of an open SQLite database."""
     src_uri = src.as_uri() + "?mode=ro"
-    with sqlite3.connect(src_uri, uri=True) as src_conn:
+    src_conn = sqlite3.connect(src_uri, uri=True)
+    dst_conn: sqlite3.Connection | None = None
+    try:
         if dst.exists():
             dst.unlink()
-        with sqlite3.connect(str(dst)) as dst_conn:
-            src_conn.backup(dst_conn)
-            dst_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        dst_conn = sqlite3.connect(str(dst))
+        src_conn.backup(dst_conn)
+        # Explicitly close the cursor returned by PRAGMA. On Windows, an
+        # unclosed SQLite cursor can keep the staged DB file locked even
+        # after the connection itself is closed.
+        cursor = dst_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        cursor.close()
+    finally:
+        if dst_conn is not None:
+            dst_conn.close()
+        src_conn.close()
 
 
 def _check_sqlite_integrity(db_file: Path) -> None:
