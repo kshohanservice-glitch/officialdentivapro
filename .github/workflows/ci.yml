@@ -41,7 +41,22 @@ jobs:
           mypy dentiva
 
       - name: Pytest
-        run: pytest -v --cov=dentiva --cov-report=term-missing
+        env:
+          QT_QPA_PLATFORM: minimal
+        shell: bash
+        run: |
+          set -o pipefail
+          python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
+          pytest -v --cov=dentiva --cov-report=term-missing 2>&1 | tee pytest.log
+        continue-on-error: false
+
+      - name: Upload pytest log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-log-${{ matrix.os }}
+          path: pytest.log
+          if-no-files-found: ignore
 
       - name: Verify DB init
         shell: bash
