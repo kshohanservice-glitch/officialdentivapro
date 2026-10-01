@@ -1,0 +1,135 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dentiva-pro"
+version = "1.0.0"
+description = "Dentiva Pro — Offline Dental Clinic Management for Bangladesh"
+authors = [{name = "Shohan Khan", email = "helloiamshohan@gmail.com"}]
+license = {text = "Proprietary — all rights reserved"}
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: Microsoft :: Windows",
+    "Environment :: Win32 (MS Windows)",
+    "Topic :: Office/Business :: Medical",
+    "Intended Audience :: Healthcare Industry",
+]
+dependencies = [
+    "PySide6-Essentials==6.7.3",
+    "SQLAlchemy==2.0.36",
+    "Alembic==1.14.0",
+    "bcrypt==4.2.1",
+    "Pillow==11.0.0",
+    "pydantic==2.10.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "pytest-qt==4.4.0; sys_platform == 'win32' or sys_platform == 'darwin'",
+    "factory-boy==3.3.1",
+    "ruff==0.8.4",
+    "mypy==1.13.0",
+]
+build = [
+    "pyinstaller==6.11.1",
+]
+
+[project.scripts]
+dentiva-pro = "dentiva.__main__:main"
+
+[project.gui-scripts]
+dentiva-pro-gui = "dentiva.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["dentiva*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"dentiva.ui" = ["*.qss", "*.qrc"]
+"dentiva" = ["py.typed"]
+
+# ---------------- Ruff ----------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["dentiva", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "N", "SIM", "RUF"]
+ignore = [
+    "E501",   # long lines handled by formatter when needed
+    "RUF001", "RUF002",  # unicode-character ambiguity (Bangla/typography intentional at times)
+    "UP007",   # X | Y annotations are fine; keep Union for forward-compat clarity in some spots
+    "N802", "N803", "N806",  # Qt subclass overrides use camelCase; PEP8 violations from Qt API
+    "B018",   # useless expr (intentional no-op / linter comments)
+    "SIM102", # Combine if statements using 'and' (often hurts readability)
+    "SIM105", # contextlib.suppress (try/except pass is fine and explicit)
+    "SIM103", # direct return bool (we keep explicit if/return for clarity)
+    "B904",   # raise-from inside except -- not mandatory for our style
+    "F841",   # assigned-but-unused; flagged only when egregious via manual review
+]
+
+[tool.ruff.lint.per-file-ignores]
+"dentiva/db/migrations/**" = ["E", "F", "B", "UP", "W", "SIM", "RUF"]
+"tests/**" = ["B011", "SIM117"]
+"dentiva/ui/**" = ["N802", "N803", "N806"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------- Mypy ----------------
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+strict_optional = true
+disallow_untyped_defs = false   # will tighten progressively
+ignore_missing_imports = true
+exclude = ["dentiva/db/migrations/"]
+
+# PySide6 type stubs are incomplete and emit many false-positive attr-defined
+# errors. We relax checks on UI modules; services/models keep stricter checks.
+[[tool.mypy.overrides]]
+module = [
+    "dentiva.ui.*",
+    "dentiva.app",
+]
+disable_error_code = ["attr-defined", "misc", "var-annotated"]
+
+[[tool.mypy.overrides]]
+module = ["dentiva.activation.machine"]
+disable_error_code = ["attr-defined"]
+
+# ---------------- Pytest ----------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "slow: marks tests as slow",
+    "ui: marks UI tests (require a display / QApplication; skipped in headless CI by default)",
+    "performance: marks performance / stress tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["dentiva"]
+omit = ["dentiva/db/migrations/*", "dentiva/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 0   # raised as coverage grows
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

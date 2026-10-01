@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.spec.bak
+.eggs/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing / QA
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+coverage.xml
+
+# Runtime / local data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+logs/
+data/
+backups/
+config/local*.json
+*.pid
+
+# Build artifacts (release output goes to /dist at repo root, but ignore intermediate)
+installer/output/
+*.exe
+*.msi
+
+# Secrets / local overrides
+.env
+.env.local
+activation_*.dat
+
+# Node (if any tooling uses it)
+node_modules/
+.coverage

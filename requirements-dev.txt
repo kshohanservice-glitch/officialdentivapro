@@ -1,0 +1,7 @@
+-r requirements.txt
+pytest==8.3.4
+pytest-cov==6.0.0
+pytest-qt==4.4.0; sys_platform == "win32" or sys_platform == "darwin"
+factory-boy==3.3.1
+ruff==0.8.4
+mypy==1.13.0
