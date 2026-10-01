@@ -45,16 +45,17 @@ jobs:
         shell: bash
         env:
           QT_QPA_PLATFORM: offscreen
+          PYTHONFAULTHANDLER: "1"
         run: |
           set -e
           python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
           set +e
-          pytest -v -p no:pytest-qt --cov=dentiva --cov-report=term-missing > pytest.log 2>&1
+          pytest tests/ -v -p no:pytest-qt > pytest.log 2>&1
           rc=$?
           set -e
           echo "PYTEST_EXIT_CODE=$rc"
-          echo "--- pytest.log tail (250 lines) ---"
-          tail -n 250 pytest.log
+          echo "--- pytest.log tail (300 lines) ---"
+          tail -n 300 pytest.log
           echo "--- end of pytest.log tail ---"
           exit $rc
 
