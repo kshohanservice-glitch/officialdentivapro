@@ -55,6 +55,17 @@ def _get_dentist(session_factory):
         return uow.session.scalar(select(Dentist)).id
 
 
+def test_list_dentists_loads_designations_without_joined_result_error(session_factory):
+    admin = _bootstrap(session_factory)
+    with UnitOfWork(session_factory) as uow:
+        dentists = __import__("dentiva.services.dentist_service", fromlist=["list_dentists"]).list_dentists(
+            uow.session, admin
+        )
+        assert len(dentists) == 1
+        assert dentists[0].name == "Dr R"
+        assert dentists[0].designations == []
+
+
 def test_create_appointment_basic(session_factory):
     admin = _bootstrap(session_factory)
     pid = _patient(session_factory, admin)
