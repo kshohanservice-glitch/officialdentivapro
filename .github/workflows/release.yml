@@ -1,0 +1,218 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: "Version tag/label for the installer filename (e.g. dev, v1.0.0-rc1, v1.0.0)"
+        required: true
+        default: "dev"
+  push:
+    tags:
+      - "v*"
+    branches:
+      - "arena/**"
+
+jobs:
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package (build + dev extras)
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[build,dev]"
+
+      - name: Ruff
+        shell: bash
+        run: ruff check dentiva tests scripts
+
+      - name: Mypy
+        shell: bash
+        run: mypy dentiva
+
+      - name: Pytest
+        shell: bash
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONFAULTHANDLER: "1"
+        run: |
+          set -e
+          python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
+          set +e
+          pytest tests/ -v -p no:pytest-qt > pytest.log 2>&1
+          rc=$?
+          set -e
+          echo "PYTEST_EXIT_CODE=$rc"
+          echo "--- pytest.log tail (300 lines) ---"
+          tail -n 300 pytest.log
+          echo "--- end of pytest.log tail ---"
+          exit $rc
+
+      - name: Build icon
+        shell: bash
+        run: python scripts/build_icon.py
+
+      - name: Build PyInstaller onedir
+        shell: bash
+        run: pyinstaller scripts/dist_pyinstaller.spec --noconfirm
+
+      - name: Pre-NSIS bundle listing
+        shell: pwsh
+        run: |
+          Write-Host "=== PyInstaller output (dist/DentivaPro head) ==="
+          if (Test-Path dist/DentivaPro) {
+            Get-ChildItem dist/DentivaPro | Select-Object Name,Length | Format-Table -AutoSize
+            Write-Host "DentivaPro.exe exists:" (Test-Path dist/DentivaPro/DentivaPro.exe)
+          } else {
+            Write-Host "dist/DentivaPro not found"
+            Get-ChildItem dist -ErrorAction SilentlyContinue
+          }
+
+      - name: Smoke-test frozen app startup
+        shell: pwsh
+        run: |
+          $env:DENTIVA_DATA_DIR = "$env:GITHUB_WORKSPACE\build-smoke-data"
+          Remove-Item -Recurse -Force $env:DENTIVA_DATA_DIR -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $env:DENTIVA_DATA_DIR | Out-Null
+
+          $exe = "$env:GITHUB_WORKSPACE\dist\DentivaPro\DentivaPro.exe"
+          if (!(Test-Path $exe)) {
+            Write-Error "Frozen executable not found: $exe"
+            exit 1
+          }
+
+          Write-Host "Starting frozen app smoke test..."
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 12
+          $process.Refresh()
+
+          if ($process.HasExited) {
+            Write-Error "Frozen app exited during startup with code $($process.ExitCode)."
+            exit 1
+          }
+
+          Write-Host "Frozen app remained running after startup; terminating smoke-test process."
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+
+      - name: Install NSIS
+        uses: negrutiu/nsis-install@v3
+        with:
+          distro: official
+          arch: x86
+          register-path: true
+
+      - name: Verify NSIS
+        shell: pwsh
+        run: |
+          $makensis = Get-Command makensis.exe -ErrorAction Stop
+          Write-Host "makensis: $($makensis.Source)"
+          & $makensis.Source /VERSION
+
+      - name: Compile NSIS installer
+        uses: joncloud/makensis-action@v4
+        with:
+          script-file: installer/dentivapro.nsi
+          arguments: "/V4 /NOCD"
+
+      - name: Post-NSIS check
+        shell: pwsh
+        run: |
+          Write-Host "=== After NSIS ==="
+          Get-ChildItem installer -ErrorAction SilentlyContinue
+          if (!(Test-Path installer/DentivaPro-Setup.exe)) {
+            Write-Error "installer/DentivaPro-Setup.exe not produced"
+            exit 1
+          }
+          Get-Item installer/DentivaPro-Setup.exe | Format-List Name,Length
+
+      - name: Compute installer label
+        id: label
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $label = "${{ github.ref_name }}"
+          } elseif ("${{ inputs.version_tag }}" -ne "") {
+            $label = "${{ inputs.version_tag }}"
+          } else {
+            $label = "dev"
+          }
+          $safe = $label -replace "/", "-"
+          echo "label=$safe" >> $env:GITHUB_OUTPUT
+          echo "Resolved installer label: $safe"
+
+      - name: Move installer into dist/
+        shell: pwsh
+        run: |
+          $label = "${{ steps.label.outputs.label }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Move-Item -Force "installer/DentivaPro-Setup.exe" "dist/DentivaPro-Setup-$label.exe"
+          Get-ChildItem dist
+
+      - name: Compute SHA-256 checksum
+        shell: pwsh
+        id: checksum
+        run: |
+          $label = "${{ steps.label.outputs.label }}"
+          $file = "dist/DentivaPro-Setup-$label.exe"
+          $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLower()
+          "$hash *$file" | Out-File -Encoding ascii "dist/DentivaPro-Setup-$label.exe.sha256"
+          echo "sha256=$hash" >> $env:GITHUB_OUTPUT
+          echo "file=$file" >> $env:GITHUB_OUTPUT
+          Get-Content "dist/DentivaPro-Setup-$label.exe.sha256"
+
+      - name: Sanity-check the built onedir bundle
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist/DentivaPro/DentivaPro.exe")) {
+            Write-Error "dist/DentivaPro/DentivaPro.exe not found - PyInstaller did not produce a GUI binary."
+            exit 1
+          }
+          Get-Item "dist/DentivaPro/DentivaPro.exe" | Format-List Name, Length
+          $required = @(
+            "dist/DentivaPro/_internal/PySide6/QtCore.pyd",
+            "dist/DentivaPro/_internal/PySide6/QtWidgets.pyd",
+            "dist/DentivaPro/_internal/PySide6/QtGui.pyd",
+            "dist/DentivaPro/_internal/PySide6/QtPrintSupport.pyd"
+          )
+          foreach ($p in $required) {
+            if (!(Test-Path $p)) {
+              $leaf = Split-Path $p -Leaf
+              $found = Get-ChildItem -Recurse -Path dist/DentivaPro -Filter $leaf -ErrorAction SilentlyContinue | Select-Object -First 1
+              if (-not $found) {
+                Write-Error "Required Qt module $leaf missing from PyInstaller bundle."
+                exit 1
+              } else {
+                Write-Host "OK $leaf -> $($found.FullName)"
+              }
+            } else {
+              Write-Host "OK $p"
+            }
+          }
+          Write-Host "PyInstaller bundle sanity check passed."
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DentivaPro-Setup-${{ steps.label.outputs.label }}
+          path: dist/
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/DentivaPro-Setup-*.exe
+            dist/DentivaPro-Setup-*.exe.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: true

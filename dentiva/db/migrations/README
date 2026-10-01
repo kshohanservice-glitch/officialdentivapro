@@ -1,0 +1,8 @@
+Alembic migration environment for Dentiva Pro.
+
+Do not edit files in versions/ by hand; use::
+
+    alembic revision --autogenerate -m "description"
+
+Always review auto-generated migrations before committing, especially for
+SQLite where ``batch_alter_table`` is required for most ALTER operations.

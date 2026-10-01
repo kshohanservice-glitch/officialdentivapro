@@ -1,0 +1,14 @@
+Dentiva Pro — End-User License Agreement (EULA)
+
+Copyright (c) 2026 Shohan Khan. All rights reserved.
+Contact: helloiamshohan@gmail.com
+
+This software is proprietary commercial software. Use of Dentiva Pro is
+permitted only under the terms of a valid license acquired from the author.
+
+This repository may be accessed for development/build/review purposes as
+authorised by the author. Unauthorised copying, redistribution, resale, or
+decompilation for the purpose of circumventing licensing is prohibited.
+
+All patient, clinical, and financial data produced by end users of Dentiva
+Pro remains the property of the respective clinic and its patients.

@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>themes/default.qss</file>
+        <file>icon/dentiva-pro.ico</file>
+    </qresource>
+</RCC>
