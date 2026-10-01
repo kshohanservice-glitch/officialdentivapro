@@ -27,8 +27,15 @@ KIND_LABEL = {
     "patients": "Patients",
     "appointments": "Appointments",
     "invoices": "Invoices",
-    "payments": "Payments",
+    "prescriptions": "Prescriptions",
+    "inventory": "Inventory",
+    "treatments": "Treatments",
+    "attachments": "Attachments",
 }
+
+# Routes that require selecting an entity inside a page (e.g. open patient
+# profile and jump to that id).
+_ROUTE_FOR_KIND = None  # filled lazily from dashboard_service if present
 
 
 class GlobalSearchPopup(QFrame):

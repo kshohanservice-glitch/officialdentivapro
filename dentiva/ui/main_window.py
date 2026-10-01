@@ -183,6 +183,9 @@ class MainWindow(QMainWindow):
         from dentiva.ui.views.audit.audit_view import AuditView
         self.replace_view("audit", AuditView(self._session_factory, self._principal, parent=self._stack))
 
+        from dentiva.ui.views.attachments.attachments_view import AttachmentsView
+        self.replace_view("attachments", AttachmentsView(self._session_factory, self._principal, parent=self._stack))
+
         from dentiva.ui.views.notifications.notifications_view import NotificationsView
         self.replace_view("notifications", NotificationsView(self._session_factory, self._principal, parent=self._stack))
 

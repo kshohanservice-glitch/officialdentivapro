@@ -36,6 +36,7 @@ ROUTES: dict[str, tuple[str, ViewFactory]] = {
     "staff":         ("Staff & Users",  _placeholder("Staff & Users", "Employees, login users, roles, and permissions.")),
     "notifications": ("Notifications",  _placeholder("Notifications", "In-app alerts and reminders.")),
     "audit":         ("Audit log",      _placeholder("Audit log", "System-wide audit trail of all significant actions.")),
+    "attachments":   ("Attachments",    _placeholder("Attachments", "Files attached to patients, visits, prescriptions, invoices.")),
     "backup":        ("Backup & Restore", _placeholder("Backup & Restore", "Manual and scheduled backups; restore safety.")),
     "settings":      ("Settings",       _placeholder("Settings", "Clinic profile, dentists, printers, preferences.")),
     "about":         ("About",          _placeholder("About Dentiva Pro", "Dentiva Pro v1.0.0\nDeveloped by Shohan Khan\nhelloiamshohan@gmail.com")),

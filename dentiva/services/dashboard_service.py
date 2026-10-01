@@ -26,7 +26,9 @@ from dentiva.models import (
     Notification,
     Patient,
     Payment,
+    Prescription,
     QueueEntry,
+    TreatmentCatalog,
 )
 
 # ---------------------------------------------------------------------------
@@ -239,12 +241,25 @@ class SearchResult:
     entity_id: int      # id for selection/opening later
 
 
-def global_search(session: Session, principal: Principal, query: str, limit: int = 20) -> list[SearchResult]:
-    """Search across patients, appointments, invoices.
+KIND_LABEL = {
+    "patients": "Patients",
+    "appointments": "Appointments",
+    "invoices": "Invoices",
+    "prescriptions": "Prescriptions",
+    "inventory": "Inventory",
+    "treatments": "Treatments",
+    "attachments": "Attachments",
+}
+
+
+def global_search(session: Session, principal: Principal, query: str, limit: int = 30) -> list[SearchResult]:
+    """Search across patients, appointments, invoices, prescriptions,
+    inventory items, treatments, and attachments.
 
     Returns results only for entities the principal can view, capped to a
     total of ``limit`` entries. Safe to call on every keystroke.
     """
+    from dentiva.services import attachment_service
     q = (query or "").strip()
     if not q or len(q) < 1:
         return []
@@ -261,6 +276,7 @@ def global_search(session: Session, principal: Principal, query: str, limit: int
                     Patient.name.ilike(like),
                     Patient.phone.ilike(like),
                     Patient.patient_code.ilike(like),
+                    Patient.email.ilike(like),
                 ),
                 Patient.deleted_at.is_(None),
             )
@@ -277,12 +293,12 @@ def global_search(session: Session, principal: Principal, query: str, limit: int
                 kind="patients",
                 title=r.name or "(no name)",
                 subtitle="Patient · " + " · ".join(sub_parts) if sub_parts else "Patient",
-                route="patients",
+                route="patient_profile",
                 entity_id=r.id,
             ))
         remaining -= len(patient_rows)
 
-    # --- Appointments (today + future by patient name match) ---
+    # --- Appointments ---
     if remaining > 0 and principal.has(Permission.APPOINTMENTS_VIEW) and principal.has(Permission.PATIENTS_VIEW):
         appt_rows: list[Any] = list(session.execute(
             select(
@@ -296,11 +312,12 @@ def global_search(session: Session, principal: Principal, query: str, limit: int
                 or_(
                     Patient.name.ilike(like),
                     Appointment.reason.ilike(like),
+                    Patient.phone.ilike(like),
                 ),
-                Appointment.scheduled_at >= local_now() - dt.timedelta(days=7),
+                Appointment.scheduled_at >= local_now() - dt.timedelta(days=365),
                 Appointment.cancelled_at.is_(None),
             )
-            .order_by(Appointment.scheduled_at.asc())
+            .order_by(Appointment.scheduled_at.desc())
             .limit(remaining)
         ).all())
         for r in appt_rows:
@@ -344,6 +361,100 @@ def global_search(session: Session, principal: Principal, query: str, limit: int
                 entity_id=r.id,
             ))
         remaining -= len(inv_rows)
+
+    # --- Prescriptions ---
+    if remaining > 0 and principal.has(Permission.PRESCRIPTIONS_VIEW) and principal.has(Permission.PATIENTS_VIEW):
+        rx_rows = list(session.execute(
+            select(Prescription.id, Prescription.date, Patient.name.label("patient_name"))
+            .join(Patient, Patient.id == Prescription.patient_id)
+            .where(
+                or_(
+                    Patient.name.ilike(like),
+                    Prescription.chief_complaint.ilike(like),
+                    Prescription.notes.ilike(like),
+                ),
+            )
+            .order_by(Prescription.date.desc())
+            .limit(remaining)
+        ).all())
+        for r in rx_rows:
+            d = r.date.strftime("%d %b %Y") if r.date else ""
+            results.append(SearchResult(
+                kind="prescriptions",
+                title=f"Rx for {r.patient_name}",
+                subtitle=f"Prescription · {d}",
+                route="prescriptions",
+                entity_id=r.id,
+            ))
+        remaining -= len(rx_rows)
+
+    # --- Inventory ---
+    if remaining > 0 and principal.has(Permission.INVENTORY_VIEW):
+        inv_rows = list(session.execute(
+            select(InventoryItem.id, InventoryItem.name, InventoryItem.sku, InventoryItem.current_qty, InventoryItem.min_level_qty)
+            .where(
+                or_(
+                    InventoryItem.name.ilike(like),
+                    InventoryItem.sku.ilike(like),
+                ),
+            )
+            .order_by(InventoryItem.name.asc())
+            .limit(remaining)
+        ).all())
+        for r in inv_rows:
+            qty = float(r.current_qty or 0)
+            results.append(SearchResult(
+                kind="inventory",
+                title=r.name,
+                subtitle=f"Inventory · {r.sku or 'no SKU'} · {qty:g} on hand",
+                route="inventory",
+                entity_id=r.id,
+            ))
+        remaining -= len(inv_rows)
+
+    # --- Treatments catalog ---
+    if remaining > 0:
+        # Treatments catalog doesn't have a dedicated permission; patients view is enough to see the catalog.
+        try:
+            tr_rows = list(session.execute(
+                select(TreatmentCatalog.id, TreatmentCatalog.name, TreatmentCatalog.category)
+                .where(
+                    or_(
+                        TreatmentCatalog.name.ilike(like),
+                        TreatmentCatalog.category.ilike(like),
+                    ),
+                )
+                .order_by(TreatmentCatalog.name.asc())
+                .limit(remaining)
+            ).all())
+        except Exception:
+            tr_rows = []
+        for r in tr_rows:
+            results.append(SearchResult(
+                kind="treatments",
+                title=r.name,
+                subtitle=f"Treatment · {r.category or ''}",
+                route="treatments",
+                entity_id=r.id,
+            ))
+        remaining -= len(tr_rows)
+
+    # --- Attachments (filename, title, notes) ---
+    if remaining > 0 and principal.has(Permission.ATTACHMENTS_VIEW) and principal.has(Permission.PATIENTS_VIEW):
+        atts = attachment_service.search_attachments(session, principal, q, limit=remaining)
+        for h in atts:
+            route = "patient_profile"
+            eid = h.get("patient_id") or h.get("attachable_id") or 0
+            if not eid:
+                continue
+            results.append(SearchResult(
+                kind="attachments",
+                title=h["title"],
+                subtitle=h["subtitle"] + " · " + h["original_filename"],
+                route=route,
+                entity_id=eid,
+            ))
+        remaining -= len(atts)
 
     return results[:limit]
 
