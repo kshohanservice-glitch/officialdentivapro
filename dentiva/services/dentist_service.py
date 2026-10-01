@@ -67,7 +67,10 @@ def list_dentists(session: Session, principal: Principal, *,
     q = select(Dentist)
     if not include_inactive:
         q = q.where(Dentist.deleted_at.is_(None))
-    return list(session.scalars(q.order_by(Dentist.name)))
+    # Keep the query safe even if a future query option/mapping reintroduces
+    # joined eager loading on the designations collection. SQLAlchemy requires
+    # Result.unique() whenever a collection is joined into the result set.
+    return list(session.scalars(q.order_by(Dentist.name)).unique())
 
 
 def get_dentist(session: Session, dentist_id: int) -> Dentist:
