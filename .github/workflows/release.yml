@@ -51,15 +51,15 @@ jobs:
           pytest -v --cov=dentiva --cov-report=term-missing 2>&1 | tee pytest.log
 
       - name: Show pytest tail
-        if: failure()
-        shell: bash
+        if: ${{ always() }}
+        shell: pwsh
         run: |
-          echo "=== pytest.log tail ==="
-          if [ -f pytest.log ]; then
-            tail -200 pytest.log
-          else
-            echo "pytest.log missing"
-          fi
+          Write-Host "=== pytest.log tail ==="
+          if (Test-Path pytest.log) {
+            Get-Content pytest.log -Tail 200
+          } else {
+            Write-Host "pytest.log missing"
+          }
 
       - name: Build icon
         run: python scripts/build_icon.py
