@@ -141,7 +141,7 @@ class MainWindow(QMainWindow):
         self._views: dict[str, QWidget] = {}
         for key in ("dashboard", "patients", "appointments", "queue", "treatments",
                     "prescriptions", "invoices", "payments", "inventory", "accounting",
-                    "staff", "backup", "settings", "about"):
+                    "staff", "audit", "backup", "settings", "about"):
             widget = view_for(key, parent=self._stack)
             self._stack.addWidget(widget)
             self._views[key] = widget        # Replace placeholder views with their live implementations now that
@@ -176,6 +176,12 @@ class MainWindow(QMainWindow):
 
         from dentiva.ui.views.accounting.accounting_view import AccountingView
         self.replace_view("accounting", AccountingView(self._session_factory, self._principal, parent=self._stack))
+
+        from dentiva.ui.views.staff.staff_view import StaffUsersView
+        self.replace_view("staff", StaffUsersView(self._session_factory, self._principal, parent=self._stack))
+
+        from dentiva.ui.views.audit.audit_view import AuditView
+        self.replace_view("audit", AuditView(self._session_factory, self._principal, parent=self._stack))
 
         # Notification badge refresh timer (every 30 seconds).
         self._notif_timer = QTimer(self)

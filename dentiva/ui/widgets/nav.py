@@ -62,6 +62,7 @@ DEFAULT_NAV: tuple[NavSection, ...] = (
         "Administration",
         (
             NavItem("staff", "Staff & Users", "☺"),
+            NavItem("audit", "Audit log", "✓"),
             NavItem("backup", "Backup & Restore", "⎘"),
             NavItem("settings", "Settings", "⚙"),
             NavItem("about", "About", "ⓘ"),

@@ -54,6 +54,9 @@ def list_events(
     action: str | None = None,
     entity_type: str | None = None,
     user_id: int | None = None,
+    start=None,
+    end=None,
+    search: str | None = None,
 ) -> list[AuditEvent]:
     policy.require(principal, Permission.AUDIT_LOG_VIEW)
     from sqlalchemy import select
@@ -64,4 +67,25 @@ def list_events(
         q = q.where(AuditEvent.entity_type == entity_type)
     if user_id is not None:
         q = q.where(AuditEvent.user_id == user_id)
+    if start is not None:
+        q = q.where(AuditEvent.timestamp >= start)
+    if end is not None:
+        q = q.where(AuditEvent.timestamp <= end)
+    if search:
+        like = f"%{search}%"
+        q = q.where(AuditEvent.summary.ilike(like))
     return list(session.scalars(q))
+
+
+def list_actions(session: Session, principal: Principal) -> list[str]:
+    policy.require(principal, Permission.AUDIT_LOG_VIEW)
+    from sqlalchemy import select
+    rows = session.execute(select(AuditEvent.action).distinct()).all()
+    return sorted({r[0] for r in rows})
+
+
+def list_entity_types(session: Session, principal: Principal) -> list[str]:
+    policy.require(principal, Permission.AUDIT_LOG_VIEW)
+    from sqlalchemy import select
+    rows = session.execute(select(AuditEvent.entity_type).distinct()).all()
+    return sorted({r[0] for r in rows if r[0]})
