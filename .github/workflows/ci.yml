@@ -41,8 +41,7 @@ jobs:
           mypy dentiva
 
       - name: Pytest
-        run: |
-          pytest --cov=dentiva --cov-report=term-missing
+        run: pytest -v --cov=dentiva --cov-report=term-missing
 
       - name: Verify DB init
         shell: bash

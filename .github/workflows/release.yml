@@ -37,7 +37,7 @@ jobs:
         run: mypy dentiva
 
       - name: Pytest
-        run: pytest --cov=dentiva --cov-report=term-missing
+        run: pytest -v --cov=dentiva --cov-report=term-missing
 
       - name: Build icon
         run: python scripts/build_icon.py
