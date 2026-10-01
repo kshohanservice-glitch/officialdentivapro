@@ -264,4 +264,6 @@ def seed_defaults(session: Session) -> None:
     _seed_roles(session)
     _seed_clinical_options(session)
     _seed_tooth_reference(session)
+    from dentiva.services.accounting_service import ensure_default_categories
+    ensure_default_categories(session)
     session.flush()

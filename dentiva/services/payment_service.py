@@ -168,6 +168,10 @@ def record_payment(session: Session, principal: Principal, data: PaymentInput) -
     from dentiva.services.invoice_service import refresh_invoice_paid
     refresh_invoice_paid(session, inv)
     session.flush()
+    # Post income to accounting ledger.
+    from dentiva.services import accounting_service
+    accounting_service.ensure_default_categories(session)
+    accounting_service.record_payment_income(session, principal, p)
     audit_record(
         session, principal, "payment.create",
         entity_type="payment", entity_id=p.id,
@@ -201,6 +205,10 @@ def reverse_payment(
         from dentiva.services.invoice_service import refresh_invoice_paid
         refresh_invoice_paid(session, inv)
     session.flush()
+    # Post contra income entry.
+    from dentiva.services import accounting_service
+    accounting_service.ensure_default_categories(session)
+    accounting_service.record_payment_reversal(session, principal, p)
     audit_record(
         session, principal, "payment.reverse",
         entity_type="payment", entity_id=p.id,

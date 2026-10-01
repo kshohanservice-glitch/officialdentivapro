@@ -174,6 +174,9 @@ class MainWindow(QMainWindow):
         from dentiva.ui.views.inventory.inventory_view import InventoryView
         self.replace_view("inventory", InventoryView(self._session_factory, self._principal, parent=self._stack))
 
+        from dentiva.ui.views.accounting.accounting_view import AccountingView
+        self.replace_view("accounting", AccountingView(self._session_factory, self._principal, parent=self._stack))
+
         # Notification badge refresh timer (every 30 seconds).
         self._notif_timer = QTimer(self)
         self._notif_timer.timeout.connect(self._refresh_notif_badge)
