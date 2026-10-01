@@ -1,8 +1,6 @@
 """Tests for dashboard aggregates and global search."""
 from __future__ import annotations
 
-import datetime as dt
-
 from dentiva.core.dates import local_now
 from dentiva.core.permissions import Permission
 from dentiva.core.unit_of_work import UnitOfWork
@@ -57,7 +55,12 @@ def test_dashboard_loads_empty_state(session_factory):
 
 def test_dashboard_counts_today_appointments_and_payments(session_factory):
     p = _setup(session_factory)
-    now = local_now()
+    # Anchor to a deterministic same-day time (10:00 local) so the appointment
+    # cannot roll into the next calendar day regardless of wall-clock time.
+    # The business intent of this test is: an appointment scheduled for
+    # "today" must appear in today's count.
+    now = local_now().replace(hour=10, minute=0, second=0, microsecond=0)
+    appt_time = now  # explicitly same-day, no +1h drift
     with UnitOfWork(session_factory) as uow:
         s = uow.session
         dentist = s.query(Dentist).first()
@@ -66,7 +69,7 @@ def test_dashboard_counts_today_appointments_and_payments(session_factory):
         s.flush()
         appt = Appointment(
             patient_id=patient.id, dentist_id=dentist.id if dentist else None,
-            scheduled_at=now + dt.timedelta(hours=1), duration_minutes=15,
+            scheduled_at=appt_time, duration_minutes=15,
             reason="Checkup", status="scheduled",
         )
         s.add(appt)
