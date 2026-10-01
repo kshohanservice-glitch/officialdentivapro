@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from dentiva.core.dates import today as local_today
 from dentiva.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from dentiva.core.permissions import Permission
 from dentiva.core.unit_of_work import UnitOfWork
@@ -122,7 +123,7 @@ def test_dob_in_future_rejected(session_factory):
         with pytest.raises(ValidationError):
             patient_service.create_patient(
                 uow.session, admin,
-                _make(name="X", dob=dt.date.today() + dt.timedelta(days=5)),
+                _make(name="X", dob=local_today() + dt.timedelta(days=5)),
             )
 
 

@@ -88,8 +88,11 @@ def test_payment_auto_posts_income_and_reversal(session_factory, admin_principal
             invoice_id=inv2.id, method_id=cash_method.id, amount_paisa=100000,
         ))
         uow.commit()
-        # List accounting entries for the period.
-        today = dt.date.today()
+        # List accounting entries for the period. Use the local Dhaka date so
+        # that evening runs (UTC) don't land the payment on the next local day
+        # while the assertion still uses the UTC calendar date.
+        from dentiva.core.dates import today as local_today
+        today = local_today()
         entries = accounting_service.list_entries(uow.session, admin_principal, start=today, end=today)
         income_entries = [e for e in entries if e.source == "payment"]
         assert len(income_entries) == 1

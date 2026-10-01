@@ -16,6 +16,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from dentiva.core.dates import age_from_dob, local_now
+from dentiva.core.dates import today as local_today
 from dentiva.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from dentiva.core.permissions import Permission, Principal
 from dentiva.core.validators import (
@@ -150,7 +151,7 @@ def _validate_patient_input(session: Session, data: PatientInput, *, existing: P
 
     dob = data.dob
     age = age_from_dob(dob) if dob else None
-    if dob is not None and dob > dt.date.today():
+    if dob is not None and dob > local_today():
         raise ValidationError("Date of birth cannot be in the future.", field="dob")
 
     gender = (data.gender or "").strip().title()

@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from dentiva.core.dates import local_now
+from dentiva.core.dates import today as local_today
 from dentiva.core.errors import PermissionDeniedError, ValidationError
 from dentiva.core.permissions import Permission, Principal
 from dentiva.models import (
@@ -302,7 +304,7 @@ def create_entry(session: Session, principal: Principal, data: EntryInput) -> Ac
         raise ValidationError(f"Selected category is not a {data.kind} category.", field="category_id")
     if data.payment_method_id is not None and session.get(PaymentMethod, data.payment_method_id) is None:
         raise ValidationError("Selected payment method does not exist.", field="payment_method_id")
-    date = data.date or dt.date.today()
+    date = data.date or local_today()
     e = AccountingEntry(
         date=date, category_id=cat.id, kind=data.kind, amount_paisa=amount,
         payment_method_id=data.payment_method_id,
@@ -325,7 +327,7 @@ def record_payment_income(session: Session, principal: Principal, payment, categ
     if category_id is None:
         cat = default_income_category(session)
         category_id = cat.id
-    paid_dt = getattr(payment, "paid_at", None) or dt.datetime.now()
+    paid_dt = getattr(payment, "paid_at", None) or local_now()
     e = AccountingEntry(
         date=paid_dt.date(),
         category_id=category_id,
@@ -350,7 +352,7 @@ def record_payment_reversal(session: Session, principal: Principal, payment) -> 
     )
     cat_id = existing.category_id if existing is not None else default_income_category(session).id
     e = AccountingEntry(
-        date=dt.date.today(),
+        date=local_today(),
         category_id=cat_id,
         kind="income",
         amount_paisa=-payment.amount_paisa,

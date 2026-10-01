@@ -97,7 +97,8 @@ def test_audit_list_filters(session_factory, admin_principal):
         audit_service.record(uow.session, admin_principal, "test.action",
                              entity_type="test_entity", summary="hello world")
         uow.commit()
-        today = dt.date.today()
+        from dentiva.core.dates import today as local_today
+        today = local_today()
         evts = audit_service.list_events(
             uow.session, admin_principal, limit=10, action="test.action",
             start=dt.datetime.combine(today - dt.timedelta(days=1), dt.time.min),

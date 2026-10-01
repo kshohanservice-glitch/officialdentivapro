@@ -41,9 +41,9 @@ jobs:
           mypy dentiva
 
       - name: Pytest
-        env:
-          QT_QPA_PLATFORM: minimal
         shell: bash
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: |
           set -o pipefail
           python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
