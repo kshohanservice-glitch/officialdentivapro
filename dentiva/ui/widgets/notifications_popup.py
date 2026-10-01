@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from dentiva.core.permissions import Principal
 from dentiva.core.unit_of_work import UnitOfWork
-from dentiva.services.dashboard_service import mark_notifications_read, notification_summary
+from dentiva.services import notification_service
 
 
 class NotificationsPopup(QFrame):
@@ -67,16 +67,15 @@ class NotificationsPopup(QFrame):
 
     def refresh(self) -> None:
         with UnitOfWork(self._session_factory) as uow:
-            summary = notification_summary(uow.session, self._principal)
+            self._unread_badge_value = notification_service.unread_count(uow.session, self._principal)
+            rows = notification_service.list_notifications(uow.session, self._principal, limit=10)
             uow.commit()
-        self._unread_badge_value = int(summary["unread"])
         self._list.clear()
-        items = summary["items"]
-        if not items:
+        if not rows:
             it = QListWidgetItem("No notifications yet.", self._list)
             it.setFlags(Qt.NoItemFlags)
             return
-        for n in items:
+        for n in rows:
             title = n["title"]
             message = n.get("message") or ""
             created = n.get("created_at")
@@ -102,7 +101,7 @@ class NotificationsPopup(QFrame):
     # -------------------------------------------------------------- private
     def _mark_all_read(self) -> None:
         with UnitOfWork(self._session_factory) as uow:
-            mark_notifications_read(uow.session, self._principal)
+            notification_service.mark_all_read(uow.session, self._principal)
             uow.commit()
         self._unread_badge_value = 0
         self.refresh()

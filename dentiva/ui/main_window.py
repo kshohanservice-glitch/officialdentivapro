@@ -141,7 +141,7 @@ class MainWindow(QMainWindow):
         self._views: dict[str, QWidget] = {}
         for key in ("dashboard", "patients", "appointments", "queue", "treatments",
                     "prescriptions", "invoices", "payments", "inventory", "accounting",
-                    "staff", "audit", "backup", "settings", "about"):
+                    "staff", "notifications", "audit", "backup", "settings", "about"):
             widget = view_for(key, parent=self._stack)
             self._stack.addWidget(widget)
             self._views[key] = widget        # Replace placeholder views with their live implementations now that
@@ -183,10 +183,18 @@ class MainWindow(QMainWindow):
         from dentiva.ui.views.audit.audit_view import AuditView
         self.replace_view("audit", AuditView(self._session_factory, self._principal, parent=self._stack))
 
-        # Notification badge refresh timer (every 30 seconds).
+        from dentiva.ui.views.notifications.notifications_view import NotificationsView
+        self.replace_view("notifications", NotificationsView(self._session_factory, self._principal, parent=self._stack))
+
+        from dentiva.ui.views.settings.settings_view import SettingsView
+        self.replace_view("settings", SettingsView(self._session_factory, self._principal, parent=self._stack))
+
+        # Notification badge refresh and generator timer (every 60 seconds).
         self._notif_timer = QTimer(self)
-        self._notif_timer.timeout.connect(self._refresh_notif_badge)
-        self._notif_timer.start(30_000)
+        self._notif_timer.timeout.connect(self._on_notif_tick)
+        self._notif_timer.start(60_000)
+        # Initial run (short delay so the DB session is fully ready).
+        QTimer.singleShot(1500, self._on_notif_tick)
         self._refresh_notif_badge()
 
         self.navigate_to("dashboard")
@@ -298,6 +306,19 @@ class MainWindow(QMainWindow):
         if x < 8:
             x = 8
         popup.move(x, y)
+
+    def _on_notif_tick(self) -> None:
+        try:
+            from dentiva.core.unit_of_work import UnitOfWork as _UoW
+            from dentiva.services import notification_service
+            with _UoW(self._session_factory) as uow:
+                notification_service.generate_notifications(uow.session, self._principal)
+                # Housekeeping: delete read notifications older than 1 day.
+                notification_service.delete_all_read(uow.session, self._principal)
+                uow.commit()
+        except Exception:  # pragma: no cover
+            log.exception("Notification generation failed")
+        self._refresh_notif_badge()
 
     def _refresh_notif_badge(self) -> None:
         try:
