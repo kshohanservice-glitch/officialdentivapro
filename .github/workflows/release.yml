@@ -69,11 +69,34 @@ jobs:
         shell: bash
         run: pyinstaller scripts/dist_pyinstaller.spec --noconfirm
 
+      - name: Pre-NSIS bundle listing
+        shell: pwsh
+        run: |
+          Write-Host "=== PyInstaller output (dist/DentivaPro head) ==="
+          if (Test-Path dist/DentivaPro) {
+            Get-ChildItem dist/DentivaPro | Select-Object Name,Length | Format-Table -AutoSize
+            Write-Host "DentivaPro.exe exists:" (Test-Path dist/DentivaPro/DentivaPro.exe)
+          } else {
+            Write-Host "dist/DentivaPro not found"
+            Get-ChildItem dist -ErrorAction SilentlyContinue
+          }
+
       - name: Compile NSIS installer
         uses: joncloud/makensis-action@v4
         with:
           script-file: installer/dentivapro.nsi
-          arguments: "/V4"
+          arguments: "/V4 /NOCD"
+
+      - name: Post-NSIS check
+        shell: pwsh
+        run: |
+          Write-Host "=== After NSIS ==="
+          Get-ChildItem installer -ErrorAction SilentlyContinue
+          if (!(Test-Path installer/DentivaPro-Setup.exe)) {
+            Write-Error "installer/DentivaPro-Setup.exe not produced"
+            exit 1
+          }
+          Get-Item installer/DentivaPro-Setup.exe | Format-List Name,Length
 
       - name: Compute installer label
         id: label

@@ -34,7 +34,7 @@ jobs:
 
       - name: Ruff
         shell: bash
-        run: ruff check dentiva tests
+        run: ruff check dentiva tests scripts
 
       - name: Mypy (Linux)
         if: runner.os == 'Linux'
