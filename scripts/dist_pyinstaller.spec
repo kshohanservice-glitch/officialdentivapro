@@ -24,6 +24,7 @@ _extra_hidden = [
     "alembic.runtime.migration",
     "alembic.operations",
     "alembic.autogenerate",
+    "logging.config",
     # Qt PrintSupport is used by dentiva.printing and some PySide6
     # distributions don't pull it in automatically.
     "PySide6.QtPrintSupport",
