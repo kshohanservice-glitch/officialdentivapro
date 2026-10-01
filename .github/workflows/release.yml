@@ -49,33 +49,17 @@ jobs:
           set -o pipefail
           python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
           pytest -v --cov=dentiva --cov-report=term-missing 2>&1 | tee pytest.log
-        continue-on-error: true
 
       - name: Show pytest tail
-        if: always()
+        if: failure()
         shell: bash
         run: |
+          echo "=== pytest.log tail ==="
           if [ -f pytest.log ]; then
-            echo "=== pytest.log tail ==="
-            tail -150 pytest.log
+            tail -200 pytest.log
+          else
+            echo "pytest.log missing"
           fi
-
-      - name: Fail if pytest failed
-        shell: bash
-        run: |
-          if grep -qE "^FAILED " pytest.log; then
-            echo "Pytest had FAILED lines; failing job."
-            exit 1
-          fi
-          if grep -qE " [1-9][0-9]* failed" pytest.log; then
-            echo "Pytest summary reported failures."
-            exit 1
-          fi
-          if grep -qE "^=+ ERRORS" pytest.log; then
-            echo "Pytest reported ERRORS."
-            exit 1
-          fi
-          echo "Pytest appeared clean."
 
       - name: Build icon
         run: python scripts/build_icon.py

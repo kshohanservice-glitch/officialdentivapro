@@ -48,37 +48,19 @@ jobs:
           set -o pipefail
           python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
           pytest -v --cov=dentiva --cov-report=term-missing 2>&1 | tee pytest.log
-        continue-on-error: true
 
-      - name: Show pytest tail
+      - name: Show pytest tail and propagate exit code
         if: always()
         shell: bash
         run: |
+          echo "=== pytest.log tail ==="
           if [ -f pytest.log ]; then
-            echo "=== pytest.log tail ==="
-            tail -120 pytest.log
+            tail -200 pytest.log
+          else
+            echo "pytest.log missing"
           fi
-
-      - name: Fail if pytest failed
-        shell: bash
-        run: |
-          # Look for the pytest summary line like "1 failed, 165 passed" or
-          # "FAILED test_foo.py::bar - ..." at the start of a line. Grep for
-          # word-boundary matches so we don't false-positive on substrings.
-          if grep -qE "^FAILED " pytest.log; then
-            echo "Pytest had FAILED lines; failing job."
-            exit 1
-          fi
-          # Pytest summary line ends with "in Xs"; count failures from there.
-          if grep -qE " [1-9][0-9]* failed" pytest.log; then
-            echo "Pytest summary reported failures."
-            exit 1
-          fi
-          if grep -qE "^=+ ERRORS" pytest.log; then
-            echo "Pytest reported ERRORS."
-            exit 1
-          fi
-          echo "Pytest appeared clean."
+          echo
+          echo "=== pytest exit code was preserved via set -o pipefail (see Pytest step). If Pytest step is green we are good. ==="
 
       - name: Verify DB init
         shell: bash
