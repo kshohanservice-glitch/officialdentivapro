@@ -48,15 +48,30 @@ jobs:
           set -o pipefail
           python -c "import sys; print(sys.version); import PySide6; print('PySide6', PySide6.__version__)"
           pytest -v --cov=dentiva --cov-report=term-missing 2>&1 | tee pytest.log
-        continue-on-error: false
+        continue-on-error: true
 
-      - name: Upload pytest log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-log-${{ matrix.os }}
-          path: pytest.log
-          if-no-files-found: ignore
+      - name: Show pytest tail
+        if: always()
+        shell: bash
+        run: |
+          if [ -f pytest.log ]; then
+            echo "=== pytest.log tail ==="
+            tail -120 pytest.log
+          fi
+
+      - name: Fail if pytest failed
+        shell: bash
+        run: |
+          # Ensure we propagate the failure after showing the log tail.
+          if grep -q "^FAILED\|^ERRORS\|===== FAILURES\|===== ERRORS" pytest.log; then
+            echo "Pytest had failures; failing job."
+            exit 1
+          fi
+          # Also check exit code indirectly via pytest summary line
+          if grep -q " failed" pytest.log; then
+            echo "Pytest reported failures."
+            exit 1
+          fi
 
       - name: Verify DB init
         shell: bash
