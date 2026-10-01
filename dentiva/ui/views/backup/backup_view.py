@@ -52,6 +52,7 @@ class _BackupWorker(QThread):
         self._payload = payload
 
     def run(self) -> None:
+        res: object = None
         try:
             if self._kind == "backup":
                 res = backup_service.create_backup(
@@ -60,7 +61,6 @@ class _BackupWorker(QThread):
                     progress=lambda m, c, t: self.progress.emit(m, c, t),
                     include_attachments=self._payload.get("include_attachments", True),
                 )
-                self.finished_ok.emit(res)
             elif self._kind == "restore":
                 res = backup_service.restore_backup(
                     self._payload["principal"],
@@ -68,9 +68,10 @@ class _BackupWorker(QThread):
                     confirmation=self._payload["confirmation"],
                     progress=lambda m, c, t: self.progress.emit(m, c, t),
                 )
-                self.finished_ok.emit(res)
             else:  # pragma: no cover
                 self.failed.emit(f"Unknown operation {self._kind!r}.")
+                return
+            self.finished_ok.emit(res)
         except Exception as e:  # pragma: no cover - UI error path
             self.failed.emit(str(e))
 

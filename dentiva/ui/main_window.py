@@ -195,12 +195,16 @@ class MainWindow(QMainWindow):
         from dentiva.ui.views.backup.backup_view import BackupView
         self.replace_view("backup", BackupView(self._session_factory, self._principal, parent=self._stack))
 
+        from dentiva.ui.views.about.about_view import AboutView
+        self.replace_view("about", AboutView(self._session_factory, self._principal, parent=self._stack))
+
         # Notification badge refresh and generator timer (every 60 seconds).
         self._notif_timer = QTimer(self)
         self._notif_timer.timeout.connect(self._on_notif_tick)
         self._notif_timer.start(60_000)
         # Initial run (short delay so the DB session is fully ready).
         QTimer.singleShot(1500, self._on_notif_tick)
+        QTimer.singleShot(2500, self._maybe_prompt_backup)
         self._refresh_notif_badge()
 
         self.navigate_to("dashboard")
@@ -319,12 +323,28 @@ class MainWindow(QMainWindow):
             from dentiva.services import notification_service
             with _UoW(self._session_factory) as uow:
                 notification_service.generate_notifications(uow.session, self._principal)
-                # Housekeeping: delete read notifications older than 1 day.
                 notification_service.delete_all_read(uow.session, self._principal)
                 uow.commit()
         except Exception:  # pragma: no cover
             log.exception("Notification generation failed")
         self._refresh_notif_badge()
+
+    def _maybe_prompt_backup(self) -> None:
+        try:
+            from dentiva.services import backup_service
+            if not backup_service.auto_backup_due():
+                return
+            from PySide6.QtWidgets import QMessageBox
+            reply = QMessageBox.question(
+                self, "Backup due",
+                "A scheduled backup is due. Would you like to back up now?\n\n"
+                "(You can also open Backup & Restore at any time from the sidebar.)",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes,
+            )
+            if reply == QMessageBox.Yes:
+                self.navigate_to("backup")
+        except Exception:  # pragma: no cover
+            log.exception("Backup-due prompt failed")
 
     def _refresh_notif_badge(self) -> None:
         try:

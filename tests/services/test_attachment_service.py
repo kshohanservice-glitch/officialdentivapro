@@ -2,20 +2,19 @@
 from __future__ import annotations
 
 import io
-from pathlib import Path
 
 import pytest
-
-from dentiva.models import Attachment, Patient
+from dentiva.models import Patient
 from dentiva.services import attachment_service
-
 
 pytestmark = pytest.mark.usefixtures("session_factory")
 
 
 def _mk_patient(sess, code):
     p = Patient(name="AttachPat " + code, phone="01700000001", gender="male", patient_code=code)
-    sess.add(p); sess.commit(); return p
+    sess.add(p)
+    sess.commit()
+    return p
 
 
 def test_upload_and_list_and_delete(session, admin_principal, tmp_data_dir):

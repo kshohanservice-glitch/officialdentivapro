@@ -20,7 +20,6 @@ from dentiva.ui.dialogs.prescription_dialog import PrescriptionDialog
 from dentiva.ui.dialogs.visit_dialog import VisitDialog
 from dentiva.ui.widgets.cards import Card
 from dentiva.ui.widgets.dental_chart import FINDING_CODE_TO_LABEL, DentalChartWidget
-from dentiva.ui.widgets.placeholder import PlaceholderView
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -109,19 +108,27 @@ class PatientProfileView(QWidget):
         self._build_invoices_tab(self._inv_tab)
         self._tabs.addTab(self._inv_tab, "Invoices")
 
-        for label, desc in (
-            ("Attachments", "X-rays, photos, documents (Phase 11)."),
-        ):
-            self._tabs.addTab(PlaceholderView(label, desc, parent=self._tabs), label)
+        from dentiva.ui.widgets.attachment_panel import AttachmentPanel
+        self._attachments_tab = AttachmentPanel(
+            self._session_factory, self._principal,
+            attachable_type="patient",
+            attachable_id_getter=self._current_patient_id,
+            parent=self._tabs,
+        )
+        self._tabs.addTab(self._attachments_tab, "Attachments")
 
         root.addWidget(self._tabs, 1)
 
     # ----------------------------------------------------------------- API
+    def _current_patient_id(self) -> int | None:
+        return self._patient.id if self._patient is not None else None
+
     def load_patient(self, patient_id: int) -> None:
         with UnitOfWork(self._session_factory) as uow:
             self._patient = patient_service.get_patient(uow.session, patient_id)
             uow.commit()
         self._populate()
+        self._attachments_tab.refresh()
 
     # ------------------------------------------------------------- populate
     def _populate(self) -> None:

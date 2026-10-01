@@ -7,8 +7,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-
-from dentiva.config import get_config, update_config
+from dentiva.config import update_config
 from dentiva.core.dates import TZ
 from dentiva.models import Patient
 from dentiva.services import backup_service
@@ -24,7 +23,9 @@ pytestmark = pytest.mark.usefixtures("session_factory")
 
 def _mk_patient(sess, code):
     p = Patient(name="Pat " + code, phone="01700000000", gender="male", patient_code=code)
-    sess.add(p); sess.commit(); return p
+    sess.add(p)
+    sess.commit()
+    return p
 
 
 def test_create_backup_produces_valid_zip(session, admin_principal, tmp_data_dir):
@@ -118,7 +119,8 @@ def test_restore_rejects_corrupted_checksum(session, admin_principal, tmp_data_d
     target = Path(tmp_data_dir) / "r2"
     res = backup_service.create_backup(admin_principal, target_dir=target)
     # Tamper with the DB inside the zip.
-    import io, zipfile
+    import io
+    import zipfile
     buf = io.BytesIO()
     with zipfile.ZipFile(res.path, "r") as zin:
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:

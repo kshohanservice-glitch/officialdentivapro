@@ -68,7 +68,8 @@ def test_invalid_entry_rejected(session_factory, admin_principal):
 
 
 def test_payment_auto_posts_income_and_reversal(session_factory, admin_principal):
-    """A payment generates an income entry; reversing it generates a contra entry."""
+    """A payment generates an income entry
+    reversing it generates a contra entry."""
     with UnitOfWork(session_factory) as uow:
         accounting_service.ensure_default_categories(uow.session)
         pid = patient_service.create_patient(uow.session, admin_principal, patient_service.PatientInput(

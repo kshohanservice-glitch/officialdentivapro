@@ -7,7 +7,8 @@ from dentiva.core.errors import ActivationError
 
 @pytest.fixture(autouse=True)
 def _isolate_activation(tmp_data_dir):
-    """The tmp_data_dir fixture already redirects paths; we only need a
+    """The tmp_data_dir fixture already redirects paths
+    we only need a
     deterministic machine fingerprint per test."""
     import dentiva.paths
     importlib.reload(dentiva.paths)
