@@ -63,14 +63,19 @@ jobs:
       - name: Fail if pytest failed
         shell: bash
         run: |
-          if grep -q "^FAILED\|===== FAILURES\|===== ERRORS" pytest.log; then
-            echo "Pytest had failures; failing job."
+          if grep -qE "^FAILED " pytest.log; then
+            echo "Pytest had FAILED lines; failing job."
             exit 1
           fi
-          if grep -qE "[1-9][0-9]* failed" pytest.log; then
-            echo "Pytest reported failures."
+          if grep -qE " [1-9][0-9]* failed" pytest.log; then
+            echo "Pytest summary reported failures."
             exit 1
           fi
+          if grep -qE "^=+ ERRORS" pytest.log; then
+            echo "Pytest reported ERRORS."
+            exit 1
+          fi
+          echo "Pytest appeared clean."
 
       - name: Build icon
         run: python scripts/build_icon.py

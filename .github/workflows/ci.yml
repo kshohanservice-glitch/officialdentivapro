@@ -62,16 +62,23 @@ jobs:
       - name: Fail if pytest failed
         shell: bash
         run: |
-          # Ensure we propagate the failure after showing the log tail.
-          if grep -q "^FAILED\|^ERRORS\|===== FAILURES\|===== ERRORS" pytest.log; then
-            echo "Pytest had failures; failing job."
+          # Look for the pytest summary line like "1 failed, 165 passed" or
+          # "FAILED test_foo.py::bar - ..." at the start of a line. Grep for
+          # word-boundary matches so we don't false-positive on substrings.
+          if grep -qE "^FAILED " pytest.log; then
+            echo "Pytest had FAILED lines; failing job."
             exit 1
           fi
-          # Also check exit code indirectly via pytest summary line
-          if grep -q " failed" pytest.log; then
-            echo "Pytest reported failures."
+          # Pytest summary line ends with "in Xs"; count failures from there.
+          if grep -qE " [1-9][0-9]* failed" pytest.log; then
+            echo "Pytest summary reported failures."
             exit 1
           fi
+          if grep -qE "^=+ ERRORS" pytest.log; then
+            echo "Pytest reported ERRORS."
+            exit 1
+          fi
+          echo "Pytest appeared clean."
 
       - name: Verify DB init
         shell: bash
