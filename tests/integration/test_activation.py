@@ -1,4 +1,5 @@
-import importlib
+"""Activation end-to-end: correct/incorrect code, tamper detection, normalization."""
+from __future__ import annotations
 
 import pytest
 from dentiva.activation import machine, verifier
@@ -6,17 +7,18 @@ from dentiva.core.errors import ActivationError
 
 
 @pytest.fixture(autouse=True)
-def _isolate_activation(tmp_data_dir):
-    """The tmp_data_dir fixture already redirects paths
-    we only need a
-    deterministic machine fingerprint per test."""
+def _isolate_activation(tmp_data_dir, monkeypatch):
+    """Ensure activation reads/writes under the per-test tmp_data_dir and
+    uses a deterministic machine fingerprint (no host-dependent data).
+
+    The tmp_data_dir fixture already redirects paths via monkeypatch. We
+    additionally stub machine_fingerprint so tests are deterministic.
+    """
     import dentiva.paths
-    importlib.reload(dentiva.paths)
-    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(machine, "paths", dentiva.paths.paths)
     monkeypatch.setattr(verifier, "paths", dentiva.paths.paths)
     monkeypatch.setattr(machine, "machine_fingerprint", lambda: "test-fingerprint")
     yield
-    monkeypatch.undo()
 
 
 def test_correct_code_activates():

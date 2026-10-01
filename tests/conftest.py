@@ -22,18 +22,21 @@ def tmp_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("DENTIVA_DATA_DIR", str(data_dir))
     import importlib
 
+    import dentiva.activation.machine as machine_mod
+    import dentiva.activation.verifier as verifier_mod
     import dentiva.bootstrap as bootstrap_mod
     import dentiva.config as cfg_mod
+    import dentiva.db.alembic_support as alembic_support
+    import dentiva.db.engine as engine_mod
     import dentiva.paths
-    from dentiva.activation import verifier
-    from dentiva.db import alembic_support
-    from dentiva.db import engine as engine_mod
+    import dentiva.services.clinic_service as clinic_mod
     importlib.reload(dentiva.paths)
-    monkeypatch.setattr(verifier, "paths", dentiva.paths.paths, raising=False)
+    monkeypatch.setattr(verifier_mod, "paths", dentiva.paths.paths, raising=False)
+    monkeypatch.setattr(machine_mod, "paths", dentiva.paths.paths, raising=False)
     monkeypatch.setattr(alembic_support, "paths", dentiva.paths.paths, raising=False)
-    # engine.py and bootstrap.py have `from dentiva.paths import paths` at top.
     monkeypatch.setattr(engine_mod, "paths", dentiva.paths.paths, raising=False)
     monkeypatch.setattr(bootstrap_mod, "paths", dentiva.paths.paths, raising=False)
+    monkeypatch.setattr(clinic_mod, "paths", dentiva.paths.paths, raising=False)
     monkeypatch.setattr(cfg_mod, "_config", None)
     monkeypatch.setattr(cfg_mod, "_config_path", None)
     return data_dir
