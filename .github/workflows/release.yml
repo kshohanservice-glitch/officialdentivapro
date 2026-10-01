@@ -79,6 +79,20 @@ jobs:
             Get-ChildItem dist -ErrorAction SilentlyContinue
           }
 
+      - name: Install NSIS
+        uses: negrutiu/nsis-install@v3
+        with:
+          distro: official
+          arch: x86
+          register-path: true
+
+      - name: Verify NSIS
+        shell: pwsh
+        run: |
+          $makensis = Get-Command makensis.exe -ErrorAction Stop
+          Write-Host "makensis: $($makensis.Source)"
+          & $makensis.Source /VERSION
+
       - name: Compile NSIS installer
         uses: joncloud/makensis-action@v4
         with:
