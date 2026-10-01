@@ -6,6 +6,7 @@ import logging
 from PySide6.QtCore import QEvent, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QMainWindow,
     QMessageBox,
@@ -104,7 +105,7 @@ class MainWindow(QMainWindow):
 
         self._scroll = QScrollArea(content_wrap)
         self._scroll.setWidgetResizable(True)
-        self._scroll.setFrameShape(QWidget.NoFrame)
+        self._scroll.setFrameShape(QFrame.NoFrame)
         self._stack = QStackedWidget(self._scroll)
         self._scroll.setWidget(self._stack)
         content_layout.addWidget(self._scroll, 1)
