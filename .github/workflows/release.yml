@@ -12,9 +12,6 @@ on:
       - "v*"
     branches:
       - "arena/**"
-    paths-ignore:
-      - "docs/**"
-      - "*.md"
 
 jobs:
   build-windows:
